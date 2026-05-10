@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Calculator with Steps</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* gray-900 */
+            color: #d1d5db; /* gray-300 */
+        }
+        .lang-bn {
+            font-family: 'Hind Siliguri', sans-serif;
+        }
+        .matrix-input-grid {
+            display: grid;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            min-width: fit-content;
+        }
+        .matrix-input {
+            width: 100%;
+            padding: 0.5rem;
+            text-align: center;
+            border-radius: 0.375rem;
+            border: 1px solid #4b5563; /* gray-600 */
+            background-color: #374151; /* gray-700 */
+            color: #f9fafb; /* gray-50 */
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .matrix-input:focus {
+            outline: none;
+            border-color: #6366f1; /* indigo-500 */
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
+        }
+        .operation-btn {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .operation-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .operation-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .step-content {
+            background-color: #1f2937; /* gray-800 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            border: 1px solid #374151; /* gray-700 */
+        }
+        .step-title {
+            font-weight: 600;
+            color: #d1d5db; /* gray-300 */
+            margin-bottom: 0.5rem;
+        }
+        .struck-out {
+            color: #4b5563; /* gray-600 */
+            background-color: #374151; /* gray-700 */
+            text-decoration: line-through;
+        }
+        .lang-btn-active {
+            background-color: #4f46e5; /* indigo-600 */
+            color: #ffffff;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .lang-btn-inactive {
+            background-color: #374151; /* gray-700 */
+            color: #d1d5db; /* gray-300 */
+        }
+        /* Terminal Styles */
+        #terminal-log {
+             background-color: #0c101a;
+             border: 1px solid #374151;
+             max-height: 400px;
+        }
+        .log-entry {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+            border-bottom: 1px solid #1f2937;
+        }
+        .log-entry .timestamp {
+            color: #6b7280; /* gray-500 */
+            margin-right: 0.75rem;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #1f2937;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl relative">
+        <div class="absolute top-4 right-4 md:top-8 md:right-8 space-x-2 z-10 flex items-center">
+            <button id="toggle-log-btn" class="operation-btn px-4 py-2 rounded-md bg-gray-600 hover:bg-gray-700 text-white" data-lang-key="toggleLog">Show Log</button>
+            <button id="lang-en" class="px-4 py-2 rounded-md lang-btn-active">English</button>
+            <button id="lang-bn" class="px-4 py-2 rounded-md lang-btn-inactive">বাংলা (Bangla)</button>
+        </div>
+        
+        <header class="text-center mb-8">
+            <h1 data-lang-key="title" class="text-4xl md:text-5xl font-bold text-gray-100">Matrix Calculator</h1>
+            <p data-lang-key="subtitle" class="mt-2 text-lg text-gray-400">Perform matrix operations and see the full, step-by-step solution.</p>
+        </header>
+
+        <main id="main-grid" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Matrix List -->
+            <div class="lg:col-span-1 space-y-8">
+                <div id="matrix-list" class="space-y-8">
+                    <!-- Matrices will be dynamically added here -->
+                </div>
+                <div class="bg-gray-800 p-4 rounded-xl shadow-md flex items-center justify-center gap-4">
+                    <button id="add-matrix-btn" class="operation-btn w-full p-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700" data-lang-key="addMatrix">Add Matrix</button>
+                    <button id="remove-matrix-btn" class="operation-btn w-full p-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700" data-lang-key="removeMatrix">Remove Last Matrix</button>
+                </div>
+            </div>
+
+            <!-- Middle Column: Operations and Results -->
+            <div id="middle-column" class="lg:col-span-1 space-y-8">
+                <div class="bg-gray-800 p-6 rounded-xl shadow-md">
+                    <h2 data-lang-key="customExpression" class="text-2xl font-semibold text-gray-200 border-b border-gray-700 pb-3">Custom Expression</h2>
+                    <p data-lang-key="customExpressionHelp" class="text-sm text-gray-400 mt-3">Use A, B..., Ans, numbers, and operators: +, -, *. Use functions: transpose(), det(), inv().</p>
+                    <div class="flex flex-wrap items-center gap-2 mt-4">
+                        <input type="text" id="custom-expr-input" class="flex-grow p-2 rounded-md border border-gray-600 bg-gray-700 text-gray-50 font-mono" placeholder="(A + B) * inv(C)">
+                        <button id="use-ans-btn" class="operation-btn p-3 bg-fuchsia-600 text-white font-semibold rounded-lg hover:bg-fuchsia-700 whitespace-nowrap" data-lang-key="useResult">Use Result (Ans)</button>
+                        <button id="calculate-btn" class="operation-btn p-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 whitespace-nowrap" data-lang-key="calculateBtn">Calculate</button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-6 rounded-xl shadow-md">
+                    <h2 data-lang-key="operations" class="text-2xl font-semibold text-gray-200 border-b border-gray-700 pb-3">Quick Operations</h2>
+                    <div id="quick-actions-container" class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                        <!-- Quick actions will be dynamically generated here -->
+                    </div>
+                </div>
+
+                <div id="ans-display-container" class="bg-gray-800 p-6 rounded-xl shadow-md hidden">
+                    <h2 data-lang-key="lastResult" class="text-xl font-semibold text-gray-200 border-b border-gray-700 pb-3 mb-4">Last Result (Ans)</h2>
+                    <div id="ans-matrix" class="flex justify-center items-center"></div>
+                </div>
+
+                <div id="result-container" class="bg-gray-800 p-6 rounded-xl shadow-md min-h-[150px]">
+                    <h2 data-lang-key="result" class="text-2xl font-semibold text-gray-200 border-b border-gray-700 pb-3 mb-4">Result</h2>
+                    <div id="result" class="text-center text-gray-400 flex justify-center items-center" data-lang-key="selectOperation">Select an operation.</div>
+                </div>
+            </div>
+
+            <!-- Right Column: Terminal Log -->
+             <div id="terminal-wrapper" class="lg:col-span-1">
+                <div id="terminal-container" class="mt-0">
+                     <div class="flex justify-between items-center bg-gray-800 p-4 rounded-t-xl shadow-md">
+                         <h2 data-lang-key="terminalLog" class="text-2xl font-semibold text-gray-200">Terminal Log</h2>
+                         <button id="clear-log-btn" class="operation-btn px-4 py-2 text-sm bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700" data-lang-key="clearLog">Clear Log</button>
+                    </div>
+                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-0">
+                         <div id="terminal-log" class="rounded-bl-xl md:rounded-bl-xl md:rounded-br-none lg:rounded-bl-xl lg:rounded-br-none overflow-y-auto">
+                              <div class="sticky top-0 bg-gray-900 p-2 border-b border-gray-700 text-center font-bold" data-lang-key="actions">Actions</div>
+                             <div id="log-actions"></div>
+                         </div>
+                         <div id="terminal-history" class="bg-gray-800 rounded-br-xl md:rounded-bl-none md:rounded-br-xl lg:rounded-bl-none lg:rounded-br-xl overflow-y-auto" style="max-height: 400px;">
+                             <div class="sticky top-0 bg-gray-900 p-2 border-b border-gray-700 text-center font-bold" data-lang-key="history">History</div>
+                             <div id="history-list"></div>
+                         </div>
+                    </div>
+                </div>
+             </div>
+        </main>
+        
+        <div id="steps-container" class="bg-gray-800 p-6 rounded-xl shadow-md mt-8">
+            <h2 data-lang-key="solution" class="text-2xl font-semibold text-gray-200 border-b border-gray-700 pb-3">Step-by-Step Solution</h2>
+            <div id="steps" class="mt-4 text-gray-300 space-y-4">
+                <p data-lang-key="solutionAppear" class="text-gray-500">The detailed solution will appear here after a calculation is performed.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- TRANSLATION DATA ---
+        const translations = {
+            title: { en: "Matrix Calculator", bn: "ম্যাট্রিক্স ক্যাল্কুলেটর" },
+            subtitle: { en: "Perform matrix operations and see the full, step-by-step solution.", bn: "ম্যাট্রিক্স অপারেশন সঞ্চালন করুন এবং ধাপে ধাপে সম্পূর্ণ সমাধান দেখুন।" },
+            matrixNamed: { en: "Matrix {name}", bn: "ম্যাট্রিক্স {name}" },
+            rows: { en: "Rows:", bn: "সারি:" },
+            cols: { en: "Cols:", bn: "কলাম:" },
+            operations: { en: "Quick Operations", bn: "দ্রুত অপারেশন" },
+            result: { en: "Result", bn: "ফলাফল" },
+            selectOperation: { en: "Select an operation.", bn: "একটি অপারেশন নির্বাচন করুন।" },
+            solution: { en: "Step-by-Step Solution", bn: "ধাপে ধাপে সমাধান" },
+            solutionAppear: { en: "The detailed solution will appear here after a calculation is performed.", bn: "একটি গণনা সঞ্চালিত হওয়ার পরে এখানে বিস্তারিত সমাধান প্রদর্শিত হবে।" },
+            customExpression: { en: "Custom Expression", bn: "কাস্টম এক্সপ্রেশন" },
+            customExpressionHelp: { en: "Use A, B..., Ans, numbers, and operators: +, -, *. Use functions: transpose(), det(), inv().", bn: "A, B..., Ans, সংখ্যা এবং অপারেটর ব্যবহার করুন: +, -, *। ফাংশন ব্যবহার করুন: transpose(), det(), inv()।" },
+            calculateBtn: { en: "Calculate", bn: "গণনা করুন" },
+            useResult: { en: "Use Result (Ans)", bn: "ফলাফল ব্যবহার করুন (Ans)" },
+            lastResult: { en: "Last Result (Ans)", bn: "শেষ ফলাফল (Ans)" },
+            toggleLog: { en: "Show Log", bn: "লগ দেখুন" },
+            hideLog: { en: "Hide Log", bn: "লগ লুকান" },
+            terminalLog: { en: "Terminal Log", bn: "টার্মিনাল লগ" },
+            actions: { en: "Actions", bn: "ক্রিয়াকলাপ" },
+            history: { en: "History", bn: "ইতিহাস" },
+            clearLog: { en: "Clear Log", bn: "লগ সাফ করুন" },
+            use: { en: "Use", bn: "ব্যবহার করুন" },
+            addMatrix: { en: "Add Matrix", bn: "ম্যাট্রিক্স যোগ করুন" },
+            removeMatrix: { en: "Remove Last Matrix", bn: "শেষ ম্যাট্রিক্স সরান" },
+            
+            // Log messages
+            logDimChange: { en: "Matrix {name} dimensions set to {rows}x{cols}", bn: "ম্যাট্রিক্স {name} এর মাত্রা {rows}x{cols} সেট করা হয়েছে" },
+            logCalc: { en: "Calculating expression: {expr}", bn: "এক্সপ্রেশন গণনা করা হচ্ছে: {expr}" },
+            logLang: { en: "Language changed to {lang}", bn: "ভাষা {lang} এ পরিবর্তন করা হয়েছে" },
+            logError: { en: "Error: {msg}", bn: "ত্রুটি: {msg}" },
+            logClear: { en: "Log and history cleared.", bn: "লগ এবং ইতিহাস সাফ করা হয়েছে।" },
+            logMatrixAdded: { en: "Matrix {name} added.", bn: "ম্যাট্রিক্স {name} যোগ করা হয়েছে।" },
+            logMatrixRemoved: { en: "Matrix {name} removed.", bn: "ম্যাট্রিক্স {name} সরানো হয়েছে।" },
+            
+            // Errors
+            errorAllInputs: { en: "All matrix inputs must be filled with numbers.", bn: "সমস্ত ম্যাট্রিক্স ইনপুট সংখ্যা দিয়ে পূরণ করতে হবে।" },
+            errorDeterminantSquare: { en: "Determinant can only be calculated for a square matrix.", bn: "ডিটারমিন্যান্ট শুধুমাত্র একটি বর্গ ম্যাট্রিক্সের জন্য গণনা করা যেতে পারে।" },
+            errorInverseSquare: { en: "Inverse can only be calculated for a square matrix.", bn: "ইনভার্স শুধুমাত্র একটি বর্গ ম্যাট্রিক্সের জন্য গণনা করা যেতে পারে।" },
+            errorInverseSingular: { en: "Matrix is singular (determinant is 0), so its inverse does not exist.", bn: "ম্যাট্রিক্সটি সিঙ্গুলার (ডিটারমিন্যান্ট ০), তাই এর ইনভার্স বিদ্যমান নেই।" },
+            errorInvalidExpression: { en: "Invalid Expression. Check syntax.", bn: "অবৈধ এক্সপ্রেশন। সিনট্যাক্স পরীক্ষা করুন।" },
+            errorMismatchedParens: { en: "Mismatched Parentheses.", bn: "বন্ধনী মেলেনি।" },
+            errorScalarMatrixMismatch: { en: "Cannot perform this operation between a scalar and a matrix.", bn: "একটি স্কেলার এবং একটি ম্যাট্রিক্সের মধ্যে এই অপারেশনটি করা যাবে না।" },
+            errorSyntax: { en: "Syntax Error in expression.", bn: "এক্সপ্রেশনে সিনট্যাক্স ত্রুটি।" },
+            ansUndefined: { en: "Result (Ans) is not yet defined. Perform a calculation first.", bn: "ফলাফল (Ans) এখনও সংজ্ঞায়িত করা হয়নি। প্রথমে একটি গণনা সঞ্চালন করুন।" },
+
+            // Dynamic text templates
+            calcPart1: { en: "Part 1: Calculate", bn: "অংশ ১: গণনা করুন" },
+            calcPart2: { en: "Part 2: Calculate", bn: "অংশ ২: গণনা করুন" },
+            noteOnDimensions: { en: "Note on Dimensions:", bn: "মাত্রার উপর নোট:" },
+            addNote: { en: "The matrices have different dimensions. The smaller matrix is padded with zeros to match the dimensions of the larger matrix for the purpose of {op}.", bn: "ম্যাট্রিক্সগুলোর মাত্রা ভিন্ন। ছোট ম্যাট্রিক্সটিকে বড় ম্যাট্রিক্সের মাত্রার সাথে মেলানোর জন্য {op} এর উদ্দেশ্যে শূন্য দিয়ে প্যাড করা হয়েছে।" },
+            mulNote: { en: "For standard multiplication, the columns of the first matrix ({c1}) must equal the rows of the second matrix ({r2}). Since they don't match, the smaller matrix will be padded with zeros to make the operation possible.", bn: "সাধারণ গুণের জন্য, প্রথম ম্যাট্রিক্সের কলাম ({c1}) অবশ্যই দ্বিতীয় ম্যাট্রিক্সের সারির ({r2}) সমান হতে হবে। যেহেতু তারা মেলে না, অপারেশনটি সম্ভব করার জন্য ছোট ম্যাট্রিক্সটি শূন্য দিয়ে প্যাড করা হবে।" },
+            paddedWithRows: { en: "Matrix {name} was padded with {num} row(s) of zeros to match.", bn: "ম্যাট্রিক্স {name} কে মেলানোর জন্য {num}টি শূন্যের সারি দিয়ে প্যাড করা হয়েছে।" },
+            paddedWithCols: { en: "Matrix {name} was padded with {num} column(s) of zeros to match.", bn: "ম্যাট্রিক্স {name} কে মেলানোর জন্য {num}টি শূন্যের কলাম দিয়ে প্যাড করা হয়েছে।" },
+            paddedMatricesUsed: { en: "Padded matrices used for calculation:", bn: "গণনার জন্য ব্যবহৃত প্যাডেড ম্যাট্রিক্স:" },
+            calculatingResult: { en: "Calculating each element of the Result Matrix", bn: "ফলাফল ম্যাট্রিক্সের প্রতিটি উপাদান গণনা করা হচ্ছে" },
+            resultElement: { en: "Result(row {i}, col {j})", bn: "ফলাফল(সারি {i}, কলাম {j})" },
+            dotProductNote: { en: "Dot product of {name1}'s row {i} and {name2}'s col {j}", bn: "{name1}-এর সারি {i} এবং {name2}-এর কলাম {j}-এর ডট প্রোডাক্ট" },
+            fromPadded: { en: "(from padded matrix)", bn: "(প্যাডেড ম্যাট্রিক্স থেকে)" },
+            originalMatrix: { en: "Original Matrix", bn: "মূল ম্যাট্রিক্স" },
+            swapRowsCols: { en: "Swap rows with columns", bn: "সারি এবং কলাম অদলবদল করুন" },
+            transposeNote: { en: "Each row of the original matrix becomes a column in the transposed matrix.", bn: "মূল ম্যাট্রিক্সের প্রতিটি সারি ট্রান্সপোজড ম্যাট্রিক্সের একটি কলামে পরিণত হয়।" },
+            row: { en: "Row", bn: "সারি"},
+            col: { en: "Column", bn: "কলাম"},
+            becomes: { en: "becomes", bn: "হয়ে যায়"},
+            finalTransposed: { en: "Final Transposed Matrix:", bn: "চূড়ান্ত ট্রান্সপোজড ম্যাট্রিক্স:" },
+            det2x2: { en: "For a 2x2 matrix, det(A) = ad - bc", bn: "একটি 2x2 ম্যাট্রিক্সের জন্য, det(A) = ad - bc" },
+            expandingFirstRow: { en: "Expanding along the first row:", bn: "প্রথম সারি বরাবর সম্প্রসারণ:" },
+            term: { en: "Term", bn: "পদ" },
+            calcSubDet: { en: "Calculating sub-determinant:", bn: "সাব-ডিটারমিন্যান্ট গণনা করা হচ্ছে:" },
+            termValue: { en: "Term value", bn: "পদের মান" },
+            summingTerms: { en: "Summing the terms:", bn: "পদগুলো যোগ করা হচ্ছে:" },
+            step1Det: { en: "Step 1: Calculate the Determinant", bn: "ধাপ ১: ডিটারমিন্যান্ট গণনা করুন" },
+            determinantIs: { en: "Determinant", bn: "ডিটারমিন্যান্ট" },
+            step2Minors: { en: "Step 2: Find the Matrix of Minors", bn: "ধাপ ২: মাইনরদের ম্যাট্রিক্স খুঁজুন" },
+            minorsNote: { en: "For each element, find the determinant of the matrix that remains after removing its row and column.", bn: "প্রতিটি উপাদানের জন্য, তার সারি এবং কলাম সরানোর পরে অবশিষ্ট ম্যাট্রিক্সের ডিটারমিন্যান্ট খুঁজুন।" },
+            minorsResult: { en: "Resulting Matrix of Minors:", bn: "ফলাফলস্বরূপ মাইনরদের ম্যাট্রিক্স:" },
+            step3Cofactors: { en: "Step 3: Find the Matrix of Cofactors", bn: "ধাপ ৩: কোফ্যাক্টরদের ম্যাট্রিক্স খুঁজুন" },
+            cofactorsNote: { en: "Apply a checkerboard pattern of signs (+, -, +, ...) to the Matrix of Minors. Formula: C(i,j) = (-1)^(i+j) * M(i,j)", bn: "মাইনরদের ম্যাট্রিক্সে একটি চেকারবোর্ড প্যাটার্নের চিহ্ন (+, -, +, ...) প্রয়োগ করুন। সূত্র: C(i,j) = (-1)^(i+j) * M(i,j)" },
+            cofactorsResult: { en: "Matrix of Cofactors:", bn: "কোফ্যাক্টরদের ম্যাট্রিক্স:" },
+            step4Adjugate: { en: "Step 4: Find the Adjugate Matrix (Transpose of Cofactors)", bn: "ধাপ ৪: অ্যাডজুগেট ম্যাট্রিক্স খুঁজুন (কোফ্যাক্টরদের ট্রান্সপোজ)" },
+            adjugateNote: { en: "The adjugate is the transpose of the cofactor matrix.", bn: "অ্যাডজুগেট হল কোফ্যাক্টর ম্যাট্রিক্সের ট্রান্সপোজ।" },
+            step5Inverse: { en: "Step 5: Multiply the Adjugate Matrix by 1/Determinant", bn: "ধাপ ৫: অ্যাডজুগেট ম্যাট্রিক্সকে ১/ডিটারমিন্যান্ট দ্বারা গুণ করুন" },
+            inverseNote1: { en: "Inverse = (1 / {det}) × Adjugate", bn: "ইনভার্স = (১ / {det}) × অ্যাডজুগেট" },
+            inverseNote2: { en: "This means dividing every element of the Adjugate matrix by the determinant.", bn: "এর মানে হল অ্যাডজুগেট ম্যাট্রিক্সের প্রতিটি উপাদানকে ডিটারমিন্যান্ট দ্বারা ভাগ করা।" },
+            finalInverse: { en: "Final Inverse Matrix:", bn: "চূড়ান্ত ইনভার্স ম্যাট্রিক্স:" },
+            stepCalculate: { en: "Step {num}: Calculate", bn: "ধাপ {num}: গণনা করুন" },
+            resultOfStep: { en: "Result of Step {num} (named {name} for next steps):", bn: "ধাপ {num} এর ফলাফল ({name} নামে পরবর্তী ধাপের জন্য):" },
+            scalarMultiply: {en: "Multiplying each element by the scalar", bn: "প্রতিটি উপাদানকে স্কেলার দ্বারা গুণ করা হচ্ছে"},
+        };
+        
+        /**
+         * Main application object to encapsulate state, UI, logic, and events.
+         * This improves maintainability by organizing code into logical modules.
+         */
+        const app = {
+            // --- STATE MANAGEMENT ---
+            state: {
+                currentLanguage: 'en',
+                lastResultValue: null,
+                calculationHistory: [],
+                matrixState: [],
+                nextMatrixCharCode: 65, // 'A'
+                lastOperation: null,
+            },
+
+            // --- DOM ELEMENT REFERENCES ---
+            dom: {
+                matrixList: document.getElementById('matrix-list'),
+                resultContainer: document.getElementById('result'),
+                stepsContainer: document.getElementById('steps'),
+                ansDisplayContainer: document.getElementById('ans-display-container'),
+                ansMatrixContainer: document.getElementById('ans-matrix'),
+                logActionsContainer: document.getElementById('log-actions'),
+                historyListContainer: document.getElementById('history-list'),
+                customExprInput: document.getElementById('custom-expr-input'),
+                mainGrid: document.getElementById('main-grid'),
+                terminalWrapper: document.getElementById('terminal-wrapper'),
+                quickActionsContainer: document.getElementById('quick-actions-container'),
+            },
+
+            // --- INITIALIZATION ---
+            init() {
+                this.ui.addMatrix(); // Add Matrix A
+                this.ui.addMatrix(); // Add Matrix B
+                this.ui.setLanguage('en');
+                this.events.attach();
+
+                // On mobile, hide the log by default for a better initial view.
+                if (window.innerWidth < 1024) {
+                    this.ui.toggleLog();
+                }
+            },
+
+            // --- EVENT HANDLING ---
+            events: {
+                attach() {
+                    // Language buttons
+                    document.getElementById('lang-en').addEventListener('click', () => app.ui.setLanguage('en'));
+                    document.getElementById('lang-bn').addEventListener('click', () => app.ui.setLanguage('bn'));
+                    
+                    // Main action buttons
+                    document.getElementById('toggle-log-btn').addEventListener('click', () => app.ui.toggleLog());
+                    document.getElementById('add-matrix-btn').addEventListener('click', () => app.ui.addMatrix());
+                    document.getElementById('remove-matrix-btn').addEventListener('click', () => app.ui.removeMatrix());
+                    document.getElementById('clear-log-btn').addEventListener('click', () => app.logger.clear());
+                    
+                    // Calculation buttons
+                    document.getElementById('use-ans-btn').addEventListener('click', () => app.ui.useAnsInInput());
+                    document.getElementById('calculate-btn').addEventListener('click', () => app.handlers.handleCalculateCustom());
+
+                    // Allow pressing Enter in the input field to calculate
+                    app.dom.customExprInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            app.handlers.handleCalculateCustom();
+                        }
+                    });
+                }
+            },
+
+            // --- EVENT HANDLERS & ACTION TRIGGERS ---
+            handlers: {
+                handleCalculateCustom(isLangChange = false) {
+                    const expr = app.dom.customExprInput.value;
+                    if (!expr && !isLangChange) return;
+
+                    if (!isLangChange) {
+                        app.state.lastOperation = { type: 'custom', expression: expr };
+                        app.logger.log(translations.logCalc[app.state.currentLanguage].replace('{expr}', `<code>${expr}</code>`));
+                    }
+
+                    try {
+                        const tokens = app.calculator.tokenize(expr);
+                        const rpn = app.calculator.toRPN(tokens);
+                        const { result, steps } = app.calculator.evaluateRPN(rpn);
+
+                        app.ui.displayResult(result);
+                        app.ui.displaySteps(steps);
+                        
+                        app.state.lastResultValue = result;
+                        app.ui.displayAns(result);
+
+                        if (!isLangChange && expr.trim() && !app.state.calculationHistory.includes(expr)) {
+                            app.state.calculationHistory.push(expr);
+                            app.ui.renderHistory();
+                        }
+                    } catch (e) {
+                        app.ui.displayError(e.message);
+                    }
+                },
+                
+                handleQuickCalculate(expr, isLangChange = false) {
+                    if (!isLangChange) {
+                        app.dom.customExprInput.value = expr;
+                    }
+                    this.handleCalculateCustom(isLangChange);
+                }
+            },
+
+            // --- UI RENDERING & MANIPULATION ---
+            ui: {
+                setLanguage(lang) {
+                    app.state.currentLanguage = lang;
+                    document.documentElement.lang = lang;
+                    app.logger.log(translations.logLang[lang].replace('{lang}', lang === 'en' ? 'English' : 'বাংলা'));
+
+                    document.body.classList.toggle('lang-bn', lang === 'bn');
+                    document.getElementById('lang-en').classList.toggle('lang-btn-active', lang === 'en');
+                    document.getElementById('lang-en').classList.toggle('lang-btn-inactive', lang !== 'en');
+                    document.getElementById('lang-bn').classList.toggle('lang-btn-active', lang === 'bn');
+                    document.getElementById('lang-bn').classList.toggle('lang-btn-inactive', lang !== 'bn');
+
+                    document.querySelectorAll('[data-lang-key]').forEach(el => {
+                        const key = el.dataset.langKey;
+                        if (translations[key] && translations[key][lang]) {
+                            el.innerText = translations[key][lang];
+                        }
+                    });
+
+                    app.state.matrixState.forEach(matrix => {
+                        const titleEl = document.querySelector(`#matrix-card-${matrix.name} h2`);
+                        if (titleEl) {
+                            titleEl.innerText = translations.matrixNamed[lang].replace('{name}', matrix.name);
+                        }
+                    });
+
+                    const logButton = document.getElementById('toggle-log-btn');
+                    logButton.innerText = app.dom.terminalWrapper.classList.contains('hidden') ? translations.toggleLog[lang] : translations.hideLog[lang];
+
+                    this.renderHistory();
+                    if (app.dom.resultContainer.innerHTML.includes('<div') || app.dom.stepsContainer.innerHTML.includes('<div')) {
+                        if (app.state.lastOperation) {
+                            app.handlers.handleCalculateCustom(true);
+                        }
+                    }
+                },
+
+                toggleLog() {
+                    const isHidden = app.dom.terminalWrapper.classList.toggle('hidden');
+                    
+                    if (isHidden) {
+                        app.dom.mainGrid.classList.remove('lg:grid-cols-3');
+                        app.dom.mainGrid.classList.add('lg:grid-cols-2');
+                    } else {
+                        app.dom.mainGrid.classList.remove('lg:grid-cols-2');
+                        app.dom.mainGrid.classList.add('lg:grid-cols-3');
+                    }
+                    
+                    document.getElementById('toggle-log-btn').innerText = isHidden ? translations.toggleLog[app.state.currentLanguage] : translations.hideLog[app.state.currentLanguage];
+                },
+
+                renderQuickActions() {
+                    const container = app.dom.quickActionsContainer;
+                    container.innerHTML = '';
+                    const matrices = app.state.matrixState.map(m => m.name);
+                    if (matrices.length === 0) return;
+
+                    matrices.forEach(name => {
+                        const unaryOps = `
+                            <button onclick="app.handlers.handleQuickCalculate('transpose(${name})')" class="operation-btn p-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">${name}ᵀ</button>
+                            <button onclick="app.handlers.handleQuickCalculate('det(${name})')" class="operation-btn p-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">det(${name})</button>
+                            <button onclick="app.handlers.handleQuickCalculate('inv(${name})')" class="operation-btn p-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">Inv(${name})</button>`;
+                        container.innerHTML += unaryOps;
+                    });
+                    
+                    if (matrices.length >= 2) {
+                        for (let i = 0; i < matrices.length; i++) {
+                            for (let j = i + 1; j < matrices.length; j++) {
+                                const name1 = matrices[i];
+                                const name2 = matrices[j];
+                                const binaryOps = `
+                                    <button onclick="app.handlers.handleQuickCalculate('${name1}+${name2}')" class="operation-btn p-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">${name1} + ${name2}</button>
+                                    <button onclick="app.handlers.handleQuickCalculate('${name1}-${name2}')" class="operation-btn p-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">${name1} - ${name2}</button>
+                                    <button onclick="app.handlers.handleQuickCalculate('${name1}*${name2}')" class="operation-btn p-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg">${name1} × ${name2}</button>`;
+                                container.innerHTML += binaryOps;
+                            }
+                        }
+                    }
+                },
+                
+                addMatrix() {
+                    if (app.state.nextMatrixCharCode > 90) { 
+                        alert("Maximum number of matrices reached.");
+                        return;
+                    }
+                    const matrixName = String.fromCharCode(app.state.nextMatrixCharCode);
+                    
+                    const card = document.createElement('div');
+                    card.id = `matrix-card-${matrixName}`;
+                    card.className = 'bg-gray-800 p-6 rounded-xl shadow-md';
+                    
+                    card.innerHTML = `
+                        <h2 class="text-2xl font-semibold text-gray-200 border-b border-gray-700 pb-3">${translations.matrixNamed[app.state.currentLanguage].replace('{name}', matrixName)}</h2>
+                        <div class="flex items-center flex-wrap gap-4 mt-4">
+                            <label for="rows-${matrixName}" class="font-medium text-gray-300" data-lang-key="rows">${translations.rows[app.state.currentLanguage]}</label>
+                            <input type="number" id="rows-${matrixName}" value="2" min="1" max="5" class="w-20 p-2 rounded-md border border-gray-600 bg-gray-700 text-gray-50 text-center">
+                            <label for="cols-${matrixName}" class="font-medium text-gray-300" data-lang-key="cols">${translations.cols[app.state.currentLanguage]}</label>
+                            <input type="number" id="cols-${matrixName}" value="2" min="1" max="5" class="w-20 p-2 rounded-md border border-gray-600 bg-gray-700 text-gray-50 text-center">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <div id="matrix-container-${matrixName}" class="matrix-input-grid"></div>
+                        </div>`;
+                    
+                    app.dom.matrixList.appendChild(card);
+                    
+                    const newMatrix = {
+                        name: matrixName,
+                        rowsInput: document.getElementById(`rows-${matrixName}`),
+                        colsInput: document.getElementById(`cols-${matrixName}`),
+                        container: document.getElementById(`matrix-container-${matrixName}`)
+                    };
+                    app.state.matrixState.push(newMatrix);
+                    
+                    const updateAndLog = () => this.generateMatrixInputs(newMatrix.rowsInput.value, newMatrix.colsInput.value, newMatrix.container, matrixName);
+                    newMatrix.rowsInput.addEventListener('change', updateAndLog);
+                    newMatrix.colsInput.addEventListener('change', updateAndLog);
+
+                    this.generateMatrixInputs(newMatrix.rowsInput.value, newMatrix.colsInput.value, newMatrix.container);
+                    app.logger.log(translations.logMatrixAdded[app.state.currentLanguage].replace('{name}', matrixName));
+                    app.state.nextMatrixCharCode++;
+                    this.updateMatrixButtons();
+                    this.renderQuickActions();
+                },
+
+                removeMatrix() {
+                    if (app.state.matrixState.length <= 1) return;
+                    const lastMatrix = app.state.matrixState.pop();
+                    document.getElementById(`matrix-card-${lastMatrix.name}`).remove();
+                    app.state.nextMatrixCharCode--;
+                    app.logger.log(translations.logMatrixRemoved[app.state.currentLanguage].replace('{name}', lastMatrix.name));
+                    this.updateMatrixButtons();
+                    this.renderQuickActions();
+                },
+                
+                updateMatrixButtons() {
+                    document.getElementById('remove-matrix-btn').disabled = app.state.matrixState.length <= 1;
+                    document.getElementById('add-matrix-btn').disabled = app.state.nextMatrixCharCode > 90;
+                },
+                
+                generateMatrixInputs(rows, cols, container, matrixName) {
+                    container.innerHTML = '';
+                    container.style.gridTemplateColumns = `repeat(${cols}, minmax(50px, 1fr))`;
+                    for (let i = 0; i < rows; i++) {
+                        for (let j = 0; j < cols; j++) {
+                            const input = document.createElement('input');
+                            input.type = 'number';
+                            input.className = 'matrix-input';
+                            input.placeholder = `${i+1},${j+1}`;
+                            input.value = Math.floor(Math.random() * 10);
+                            container.appendChild(input);
+                        }
+                    }
+                    if (matrixName) {
+                        app.logger.log(translations.logDimChange[app.state.currentLanguage].replace('{name}', matrixName).replace('{rows}', rows).replace('{cols}', cols));
+                    }
+                },
+
+                matrixToHTML(matrix) {
+                    if (typeof matrix === 'number') return `<span class="font-bold text-xl">${app.util.formatNumber(matrix)}</span>`;
+                    if (!Array.isArray(matrix) || !Array.isArray(matrix[0])) return 'Invalid Matrix';
+                    
+                    const rowsHTML = matrix.map(row => {
+                        const cellsHTML = row.map(val => `<td class="px-3 py-1 text-center font-mono">${app.util.formatNumber(val)}</td>`).join('');
+                        return `<tr>${cellsHTML}</tr>`;
+                    }).join('');
+
+                    return `
+                        <div class="inline-block align-middle">
+                            <div class="flex border-l-2 border-r-2 border-gray-600 px-2 py-1 rounded-md bg-gray-900 text-gray-50">
+                                <table class="table-auto"><tbody>${rowsHTML}</tbody></table>
+                            </div>
+                        </div>`;
+                },
+
+                matrixToHTMLWithStrikeout(matrix, strikeRow, strikeCol) {
+                    const rowsHTML = matrix.map((row, i) => {
+                        const cellsHTML = row.map((val, j) => {
+                            const isStruck = i === strikeRow || j === strikeCol;
+                            return `<td class="px-3 py-1 text-center font-mono ${isStruck ? 'struck-out' : ''}">${app.util.formatNumber(val)}</td>`;
+                        }).join('');
+                        return `<tr>${cellsHTML}</tr>`;
+                    }).join('');
+                    
+                    return `
+                        <div class="inline-block align-middle">
+                          <div class="flex border-l-2 border-r-2 border-gray-600 px-2 py-1 rounded-md bg-gray-900 text-gray-50">
+                                <table class="table-auto"><tbody>${rowsHTML}</tbody></table>
+                          </div>
+                        </div>`;
+                },
+
+                renderHistory() {
+                    app.dom.historyListContainer.innerHTML = '';
+                    app.state.calculationHistory.forEach(expr => {
+                        const item = document.createElement('div');
+                        item.className = 'history-item';
+                        item.innerHTML = `<span class="font-mono text-sm flex-grow">${expr}</span>
+                                        <button class="operation-btn px-3 py-1 text-xs bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700">${translations.use[app.state.currentLanguage]}</button>`;
+                        item.querySelector('button').onclick = () => {
+                            app.dom.customExprInput.value = expr;
+                            app.handlers.handleCalculateCustom();
+                        };
+                        app.dom.historyListContainer.prepend(item);
+                    });
+                },
+
+                useAnsInInput() {
+                    const input = app.dom.customExprInput;
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+                    const text = input.value;
+                    const before = text.substring(0, start);
+                    const after  = text.substring(end, text.length);
+                    input.value = (before + "Ans" + after);
+                    input.focus();
+                    input.selectionStart = input.selectionEnd = start + 3;
+                },
+
+                displayResult: (result) => app.dom.resultContainer.innerHTML = app.ui.matrixToHTML(result),
+                displaySteps: (steps) => app.dom.stepsContainer.innerHTML = steps,
+                displayAns: (result) => {
+                    app.dom.ansMatrixContainer.innerHTML = app.ui.matrixToHTML(result);
+                    app.dom.ansDisplayContainer.classList.remove('hidden');
+                },
+                displayError: (message) => {
+                    app.dom.resultContainer.innerHTML = `<p class="text-red-500 font-semibold">${message}</p>`;
+                    app.dom.stepsContainer.innerHTML = `<p class="text-gray-500">${translations.solutionAppear[app.state.currentLanguage]}</p>`;
+                    app.dom.ansDisplayContainer.classList.add('hidden');
+                    app.logger.log(`${translations.logError[app.state.currentLanguage].replace('{msg}', message)}`);
+                },
+            },
+
+            // --- LOGGING ---
+            logger: {
+                log(message) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    const entry = document.createElement('div');
+                    entry.className = 'log-entry';
+                    entry.innerHTML = `<span class="timestamp">[${timestamp}]</span><span>${message}</span>`;
+                    app.dom.logActionsContainer.prepend(entry);
+                },
+                clear() {
+                    app.dom.logActionsContainer.innerHTML = '';
+                    app.dom.historyListContainer.innerHTML = '';
+                    app.state.calculationHistory = [];
+                    this.log(translations.logClear[app.state.currentLanguage]);
+                }
+            },
+            
+            // --- UTILITY FUNCTIONS ---
+            util: {
+                formatNumber: (num) => parseFloat(num.toFixed(4)),
+                isMatrix: (val) => Array.isArray(val),
+                isScalar: (val) => typeof val === 'number',
+                getMatrixValues(matrixName) {
+                    const matrix = app.state.matrixState.find(m => m.name === matrixName);
+                    if (!matrix) return null;
+                    const { rowsInput, colsInput, container } = matrix;
+                    const rows = parseInt(rowsInput.value);
+                    const cols = parseInt(colsInput.value);
+
+                    const matrixData = [];
+                    const inputs = container.getElementsByTagName('input');
+                    let k = 0;
+                    for (let i = 0; i < rows; i++) {
+                        matrixData[i] = [];
+                        for (let j = 0; j < cols; j++) {
+                            const val = parseFloat(inputs[k++].value);
+                            if (isNaN(val)) {
+                                throw new Error(translations.errorAllInputs[app.state.currentLanguage]);
+                            }
+                            matrixData[i][j] = val;
+                        }
+                    }
+                    return matrixData;
+                },
+            },
+            
+            // --- CALCULATION ENGINE ---
+            calculator: {
+                // RPN Parser and Evaluator
+                tokenize(expr) {
+                    const regex = /\s*([A-Z]|\bAns\b|\b(transpose|det|inv)\b|[+\-*/()]|(?:\d*\.)?\d+)\s*/g;
+                    return expr.split(regex).filter(s => s && s.trim());
+                },
+
+                toRPN(tokens) {
+                    const precedence = { '+': 1, '-': 1, '*': 2 };
+                    const functions = ['transpose', 'det', 'inv'];
+                    const output = [];
+                    const operators = [];
+                    const operands = app.state.matrixState.map(m => m.name).concat(['Ans']);
+
+                    for (const token of tokens) {
+                        if (!isNaN(parseFloat(token)) || operands.includes(token)) {
+                            output.push(token);
+                        } else if (functions.includes(token)) {
+                            operators.push(token);
+                        } else if (token in precedence) {
+                            while (operators.length > 0 && operators[operators.length - 1] in precedence && precedence[operators[operators.length - 1]] >= precedence[token]) {
+                                output.push(operators.pop());
+                            }
+                            operators.push(token);
+                        } else if (token === '(') {
+                            operators.push(token);
+                        } else if (token === ')') {
+                            while (operators.length > 0 && operators[operators.length - 1] !== '(') {
+                                output.push(operators.pop());
+                            }
+                            if (operators.length === 0) throw new Error(translations.errorMismatchedParens[app.state.currentLanguage]);
+                            operators.pop();
+                            if (functions.includes(operators[operators.length - 1])) {
+                                output.push(operators.pop());
+                            }
+                        } else {
+                            throw new Error(`${translations.errorInvalidExpression[app.state.currentLanguage]} Unknown token: ${token}`);
+                        }
+                    }
+
+                    while (operators.length > 0) {
+                        const op = operators.pop();
+                        if (op === '(') throw new Error(translations.errorMismatchedParens[app.state.currentLanguage]);
+                        output.push(op);
+                    }
+                    return output;
+                },
+                
+                evaluateRPN(rpn) {
+                    const stack = [];
+                    let allSteps = '';
+                    let stepCounter = 1;
+                    let intermediateCounter = 1;
+                    
+                    const matrixMap = {};
+                    for (const matrix of app.state.matrixState) {
+                        matrixMap[matrix.name] = app.util.getMatrixValues(matrix.name);
+                    }
+                    if(app.state.lastResultValue) {
+                        matrixMap['Ans'] = app.state.lastResultValue;
+                    }
+
+                    for (const token of rpn) {
+                        if (Object.keys(matrixMap).includes(token)) {
+                            if (!matrixMap[token]) throw new Error(translations.ansUndefined[app.state.currentLanguage]);
+                            stack.push({ value: matrixMap[token], name: token });
+                        } else if (!isNaN(parseFloat(token))) {
+                            stack.push({ value: parseFloat(token), name: token });
+                        } else {
+                            let stepResult;
+                            const stepTitle = `<h3 class="text-xl font-bold mt-6 mb-2">${translations.stepCalculate[app.state.currentLanguage].replace('{num}', stepCounter++)}: Calculate`;
+                            
+                            if (['transpose', 'det', 'inv'].includes(token)) {
+                                const operand = stack.pop();
+                                if (!operand) throw new Error(translations.errorSyntax[app.state.currentLanguage]);
+                                allSteps += `${stepTitle} ${token}(${operand.name})</h3>`;
+                                
+                                const matrix = operand.value;
+                                if (token === 'transpose') stepResult = this.transpose(matrix);
+                                if (token === 'inv') {
+                                    if (!app.util.isMatrix(matrix) || matrix.length !== (matrix[0]?.length || 0)) throw new Error(translations.errorInverseSquare[app.state.currentLanguage]);
+                                    stepResult = this.inverse(matrix);
+                                }
+                                if (token === 'det') {
+                                    if (!app.util.isMatrix(matrix) || matrix.length !== (matrix[0]?.length || 0)) throw new Error(translations.errorDeterminantSquare[app.state.currentLanguage]);
+                                    stepResult = this.determinant(matrix);
+                                }
+                            } else { 
+                                const op2 = stack.pop(), op1 = stack.pop();
+                                if (!op1 || !op2) throw new Error(translations.errorSyntax[app.state.currentLanguage]);
+                                allSteps += `${stepTitle} ${op1.name} ${token} ${op2.name}</h3>`;
+
+                                if (token === '+') stepResult = this.add(op1.value, op2.value, 'addition', op1.name, op2.name);
+                                else if (token === '-') stepResult = this.add(op1.value, op2.value, 'subtraction', op1.name, op2.name, '-');
+                                else if (token === '*') stepResult = this.multiply(op1.value, op2.value, op1.name, op2.name);
+                            }
+                            
+                            const resultName = `Res_${intermediateCounter++}`;
+                            const resultValue = stepResult.result !== undefined ? stepResult.result : stepResult.value;
+                            stack.push({ value: resultValue, name: resultName });
+                            allSteps += stepResult.steps;
+                            allSteps += `<div class="bg-green-900 bg-opacity-30 p-4 rounded-lg mt-2 border border-green-600"><h4 class="font-semibold text-green-300">${translations.resultOfStep[app.state.currentLanguage].replace('{num}', stepCounter - 1).replace('{name}', resultName)}</h4>${app.ui.matrixToHTML(resultValue)}</div>`;
+                        }
+                    }
+
+                    if (stack.length !== 1) throw new Error(translations.errorInvalidExpression[app.state.currentLanguage]);
+                    return { result: stack[0].value, steps: allSteps };
+                },
+
+                // Matrix Operations
+                add(A, B, opName, nameA, nameB, operator = '+') {
+                    if (app.util.isScalar(A) && app.util.isScalar(B)) {
+                        const result = operator === '+' ? A + B : A - B;
+                        const steps = `<div class="step-content"><p>${A} ${operator} ${B} = ${result}</p></div>`;
+                        return { result, steps };
+                    }
+                    if (app.util.isScalar(A) !== app.util.isScalar(B)) {
+                        throw new Error(translations.errorScalarMatrixMismatch[app.state.currentLanguage]);
+                    }
+                    
+                    const rA = A.length, cA = A[0]?.length || 0;
+                    const rB = B.length, cB = B[0]?.length || 0;
+                    const maxRows = Math.max(rA, rB), maxCols = Math.max(cA, cB);
+                    const result = Array(maxRows).fill(0).map(() => Array(maxCols).fill(0));
+
+                    let steps = `<div class="step-content">`;
+                    if (rA !== rB || cA !== cB) {
+                        steps += `<p class="step-title">${translations.noteOnDimensions[app.state.currentLanguage]}</p><p>${translations.addNote[app.state.currentLanguage].replace('{op}', opName)}</p><br>`;
+                    }
+                    steps += `<div class="flex items-center gap-4 flex-wrap">${app.ui.matrixToHTML(A)} <span class="text-xl">${operator}</span> ${app.ui.matrixToHTML(B)}</div>`;
+                    
+                    for (let i = 0; i < maxRows; i++) {
+                        for (let j = 0; j < maxCols; j++) {
+                            const valA = A[i]?.[j] || 0;
+                            const valB = B[i]?.[j] || 0;
+                            result[i][j] = operator === '+' ? valA + valB : valA - valB;
+                        }
+                    }
+                    steps += `<div class="flex items-center gap-4 flex-wrap mt-2"><span class="text-xl">=</span> ${app.ui.matrixToHTML(result)}</div></div>`;
+                    return { result, steps };
+                },
+                
+                multiply(m1, m2, name1, name2) {
+                    if (app.util.isScalar(m1) && app.util.isScalar(m2)) {
+                        return { result: m1 * m2, steps: `<div class="step-content"><p>${m1} × ${m2} = ${m1 * m2}</p></div>` };
+                    }
+                    if (app.util.isScalar(m1)) return this._scalarMultiply(m1, m2, name1, name2);
+                    if (app.util.isScalar(m2)) return this._scalarMultiply(m2, m1, name2, name1);
+
+                    let A = m1.map(row => [...row]);
+                    let B = m2.map(row => [...row]);
+                    let cA = A[0]?.length || 0, rB = B.length;
+                    let steps = '', padded = false;
+
+                    if (cA !== rB) {
+                        padded = true;
+                        steps += `<div class="step-content bg-yellow-900 bg-opacity-20 border-yellow-500 border"><p class="step-title text-yellow-300">${translations.noteOnDimensions[app.state.currentLanguage]}</p><p>${translations.mulNote[app.state.currentLanguage].replace('{c1}', cA).replace('{r2}', rB)}</p></div>`;
+                        if (cA > rB) {
+                            const rowsToAdd = cA - rB, newWidth = B[0]?.length || 0;
+                            for (let i = 0; i < rowsToAdd; i++) B.push(Array(newWidth).fill(0));
+                            steps += `<div class="step-content"><p>${translations.paddedWithRows[app.state.currentLanguage].replace('{name}', name2).replace('{num}', rowsToAdd)}</p></div>`;
+                        } else {
+                            const colsToAdd = rB - cA;
+                            A.forEach(row => { for (let i = 0; i < colsToAdd; i++) row.push(0); });
+                            steps += `<div class="step-content"><p>${translations.paddedWithCols[app.state.currentLanguage].replace('{name}', name1).replace('{num}', colsToAdd)}</p></div>`;
+                        }
+                    }
+
+                    const rA = A.length, cB = B[0]?.length || 0;
+                    cA = A[0]?.length || 0;
+                    const result = Array(rA).fill(0).map(() => Array(cB).fill(0));
+                    steps += `<div class="step-content"><p class="step-title">${translations.calculatingResult[app.state.currentLanguage]} (${name1} × ${name2})</p>`;
+                    
+                    steps += padded ? `<p class="step-title">${translations.paddedMatricesUsed[app.state.currentLanguage]}</p>` : '';
+                    steps += `<div class="flex items-center gap-4 flex-wrap">${app.ui.matrixToHTML(A)} <span class="text-xl">×</span> ${app.ui.matrixToHTML(B)}</div><br>`;
+                    
+                    for (let i = 0; i < rA; i++) {
+                        for (let j = 0; j < cB; j++) {
+                            let sum = 0;
+                            let stepCalc = [];
+                            for (let k = 0; k < cA; k++) {
+                                sum += A[i][k] * B[k][j];
+                                stepCalc.push(`(${app.util.formatNumber(A[i][k])} × ${app.util.formatNumber(B[k][j])})`);
+                            }
+                            result[i][j] = sum;
+                            steps += `<div class="my-2 p-2 bg-gray-900 rounded-md"><p><b>${translations.resultElement[app.state.currentLanguage].replace('{i}', i+1).replace('{j}', j+1)}</b> = ${stepCalc.join(' + ')} = <b>${app.util.formatNumber(sum)}</b></p></div>`;
+                        }
+                    }
+                    steps += `</div>`;
+                    return { result, steps };
+                },
+
+                _scalarMultiply(scalar, matrix, scalarName, matrixName) {
+                    const result = matrix.map(row => row.map(val => scalar * val));
+                    let steps = `<div class="step-content">
+                                <p class="step-title">${translations.scalarMultiply[app.state.currentLanguage]} (${scalarName} = ${app.util.formatNumber(scalar)})</p>
+                                <div class="flex items-center gap-4 flex-wrap">${app.ui.matrixToHTML(scalar)} <span class="text-xl">×</span> ${app.ui.matrixToHTML(matrix)} = ${app.ui.matrixToHTML(result)}</div>
+                                </div>`;
+                    return { result, steps };
+                },
+
+                transpose(matrix) {
+                    if (!app.util.isMatrix(matrix)) throw new Error("Transpose input must be a matrix.");
+                    const r = matrix.length;
+                    const c = matrix[0]?.length || 0;
+                    const result = Array(c).fill(0).map(() => Array(r).fill(0));
+                    for (let i = 0; i < r; i++) {
+                        for (let j = 0; j < c; j++) {
+                            result[j][i] = matrix[i][j];
+                        }
+                    }
+                    let steps = `<div class="step-content"><p class="step-title">${translations.swapRowsCols[app.state.currentLanguage]}</p>`;
+                    steps += `<div class="flex items-center gap-4 flex-wrap">${app.ui.matrixToHTML(matrix)}<sup>T</sup> <span class="text-xl">=</span> ${app.ui.matrixToHTML(result)}</div></div>`;
+                    return { result, steps };
+                },
+
+                determinant(matrix) {
+                    if (!app.util.isMatrix(matrix)) throw new Error("Determinant input must be a matrix.");
+                    const n = matrix.length;
+                    
+                    if (n === 1) return { value: matrix[0][0], steps: `<div class="step-content"><p>det = ${matrix[0][0]}</p></div>` };
+                    
+                    if (n === 2) {
+                        const value = matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0];
+                        let steps = `<div class="step-content"><p class="step-title">${translations.det2x2[app.state.currentLanguage]}</p>`;
+                        steps += `<p>= (${app.util.formatNumber(matrix[0][0])}×${app.util.formatNumber(matrix[1][1])}) - (${app.util.formatNumber(matrix[0][1])}×${app.util.formatNumber(matrix[1][0])}) = <b>${app.util.formatNumber(value)}</b></p></div>`;
+                        return { value, steps };
+                    }
+
+                    let det = 0;
+                    let steps = `<div class="step-content"><p class="step-title">${translations.expandingFirstRow[app.state.currentLanguage]}</p>`;
+                    for (let j = 0; j < n; j++) {
+                        const sign = Math.pow(-1, j);
+                        const subMatrix = matrix.slice(1).map(row => row.filter((_, colIndex) => colIndex !== j));
+                        const subDetResult = this.determinant(subMatrix);
+                        steps += `<div class="my-2 p-2 bg-gray-900 rounded-md border-l-2 border-gray-600">
+                                    <p>${translations.term[app.state.currentLanguage]} ${j+1}: ${sign > 0 ? '' : '-'} ${app.util.formatNumber(matrix[0][j])} × det(${app.ui.matrixToHTML(subMatrix)})</p>
+                                    <div class="pl-4 mt-1"><b>${translations.calcSubDet[app.state.currentLanguage]}</b>${subDetResult.steps}</div>
+                                    <p class="mt-1">${translations.termValue[app.state.currentLanguage]} = <b>${app.util.formatNumber(sign * matrix[0][j] * subDetResult.value)}</b></p>
+                                  </div>`;
+                        det += sign * matrix[0][j] * subDetResult.value;
+                    }
+                    steps += `<p class="step-title mt-4">${translations.summingTerms[app.state.currentLanguage]} det = <b>${app.util.formatNumber(det)}</b></p></div>`;
+                    return { value: det, steps };
+                },
+
+                inverse(matrix) {
+                    let steps = `<div class="step-content"><p class="step-title">${translations.step1Det[app.state.currentLanguage]}</p>`;
+                    const detResult = this.determinant(matrix);
+                    const det = detResult.value;
+                    steps += detResult.steps;
+                    steps += `<p class="mt-2 font-semibold">${translations.determinantIs[app.state.currentLanguage]} = ${app.util.formatNumber(det)}</p></div>`;
+                    if (det === 0) throw new Error(translations.errorInverseSingular[app.state.currentLanguage]);
+
+                    const n = matrix.length;
+                    steps += `<div class="step-content"><p class="step-title">${translations.step3Cofactors[app.state.currentLanguage]}</p><p>${translations.cofactorsNote[app.state.currentLanguage]}</p>`;
+                    const cofactors = Array(n).fill(0).map(() => Array(n).fill(0));
+                    for (let i = 0; i < n; i++) {
+                        for (let j = 0; j < n; j++) {
+                            const subMatrix = matrix.filter((_, r) => r !== i).map(row => row.filter((_, c) => c !== j));
+                            cofactors[i][j] = Math.pow(-1, i + j) * this.determinant(subMatrix).value;
+                        }
+                    }
+                    steps += `<p class="mt-2">${translations.cofactorsResult[app.state.currentLanguage]}</p>${app.ui.matrixToHTML(cofactors)}</div>`;
+                    
+                    steps += `<div class="step-content"><p class="step-title">${translations.step4Adjugate[app.state.currentLanguage]}</p>`;
+                    const adjugate = this.transpose(cofactors).result;
+                    steps += `<p>${translations.adjugateNote[app.state.currentLanguage]}</p>${app.ui.matrixToHTML(cofactors)}<sup>T</sup> = ${app.ui.matrixToHTML(adjugate)}</div>`;
+
+                    steps += `<div class="step-content"><p class="step-title">${translations.step5Inverse[app.state.currentLanguage]}</p>`;
+                    const result = adjugate.map(row => row.map(val => val / det));
+                    steps += `<p>${translations.inverseNote1[app.state.currentLanguage].replace('{det}', `<b>${app.util.formatNumber(det)}</b>`)}</p>`;
+                    steps += `<div class="flex items-center gap-4 flex-wrap">(1 / ${app.util.formatNumber(det)}) * ${app.ui.matrixToHTML(adjugate)} = ${app.ui.matrixToHTML(result)}</div>`;
+                    steps += `<p class="step-title mt-4">${translations.finalInverse[app.state.currentLanguage]}</p>${app.ui.matrixToHTML(result)}</div>`;
+                    
+                    return { result, steps };
+                },
+            }
+        };
+
+        // --- APP INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
+
